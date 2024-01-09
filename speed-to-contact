@@ -1,0 +1,51 @@
+const hubspot = require('@hubspot/api-client');
+
+exports.main = async (event, callback) => {
+  // HubSpot client
+  const hubspotClient = new hubspot.Client({
+    accessToken: process.env.SECRET_NAME,
+  });
+
+  // Contact details
+  const contactId = event.inputFields['hs_object_id'];
+  const SalesReadyDate = event.inputFields['YOUR DATE PROPERTY HERE WHEN PASSED TO SALES'];
+  const WorkingDate = event.inputFields['YOUR DATE PROPERTY HERE WHEN SALES MAKES CONTACT'];
+
+  try {
+    // Calculate business days difference
+    const businessDays = calculateBusinessDays(SalesReadyDate, WorkingDate);
+
+    // Calculate remaining time in hours, minutes, and seconds
+    const remainingTimeMilliseconds = WorkingDate - SalesReadyDate - (businessDays * 2 * 24 * 60 * 60 * 1000); // Subtract weekends
+
+    // Output result
+    callback({
+      outputFields: {
+        totalDurationMilliseconds: remainingTimeMilliseconds,
+      },
+    });
+
+  } catch (e) {
+    console.error(e);
+    callback({
+      outputFields: {
+        totalDurationMilliseconds: null,
+      },
+    });
+  }
+};
+
+// Function to calculate business days between two dates
+function calculateBusinessDays(startDate, endDate) {
+  const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
+  let businessDays = 0;
+
+  for (let currentDay = new Date(startDate); currentDay <= endDate; currentDay.setDate(currentDay.getDate() + 1)) {
+    const dayOfWeek = currentDay.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      businessDays++;
+    }
+  }
+
+  return businessDays;
+}
